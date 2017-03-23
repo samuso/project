@@ -3,6 +3,8 @@ import matplotlib.pyplot as plt
 import pandas
 import statsmodels.api as sm
 import scipy
+import statsmodels.stats.outliers_influence as vif
+import Stepwise_Result
 
 # For 3d plots. This import is necessary to have 3D plotting below
 from mpl_toolkits.mplot3d import Axes3D
@@ -151,23 +153,38 @@ for i in range(2016, 2017):
 
 	X = sm.add_constant(create_variables_for_params([X1,X2,X3,X4,X5]))
 
-	results = {}
+	results = []
 	for l in range(1,2 **len(Xs)):
 		X_filtered, included = choose_params_from_int(X, l)
 		model = sm.OLS(Y,X_filtered)
 		result = model.fit()
-		print "\n\n\n\n\nmodel for year: " + str(i) + "param inclusion = "
-		# print result.summary()
-		print result.rsquared_adj
-		results[str(included)] = result
+		predicted_Y = (result.predict(X_filtered) - Y) ** 2
+		if l == 25:
+			with open('prediction.csv', 'w') as output_file:
+				counter = 0
+				output_file.write("msoacd,prediction\n")
+				for msoa in msoa_order:
+					output_file.write(msoa + ',' + str(predicted_Y[counter]) + '\n')
+					counter += 1
+		# predicted_Y.sort()
+		# plt.plot(predicted_Y)
+		# plt.show()
 
+		xf = np.column_stack((np.ones(len(X_filtered)), X_filtered))
+		stepwise_result = Stepwise_Result.Stepwise_Result("model for year"+str(i), included, result, result.rsquared_adj, [vif.variance_inflation_factor(xf, k) for k in range(1,len(xf[0]))])
+		results.append(stepwise_result)
 
-	for key in results:
-		result = results[key]
-		print key
-		# print result.rsquared_adj
-		print result.summary()
+	for result in results:
+		are_collinear = False
+		for n in result.vif_result:
+			if n > 5.00:
+				are_collinear = True
 
+		is_good_fit = True if result.adjusted_rs > .9 else False
+
+		if not are_collinear and is_good_fit:
+			pass
+			result.print_object()
 
 
 
