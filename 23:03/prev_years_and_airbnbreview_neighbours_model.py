@@ -67,7 +67,6 @@ def choose_params_from_int(X, n):
 	for i in param_count_range:
 		if included[i]:
 			new_X.append([x[i+1] for x in X])
-	print included
 
 	return create_variables_for_params(new_X), included
 
@@ -151,32 +150,28 @@ for i in range(2016, 2017):
 	Xs = [X1,X2,X3,X4,X5]
 
 	X = sm.add_constant(create_variables_for_params([X1,X2,X3,X4,X5]))
-	print range(2 ** len(Xs))
+
+	results = {}
 	for l in range(1,2 **len(Xs)):
-		print l
-		X, included = choose_params_from_int(X, l)
-		model = sm.OLS(Y,X)
-		results = model.fit()
+		X_filtered, included = choose_params_from_int(X, l)
+		model = sm.OLS(Y,X_filtered)
+		result = model.fit()
 		print "\n\n\n\n\nmodel for year: " + str(i) + "param inclusion = "
-		print included
-		print results.summary()
+		# print result.summary()
+		print result.rsquared_adj
+		results[str(included)] = result
 
-	# if airbnb_on:
-	# 	if airbnb_review_not_listing:
-	# 		# data = pandas.DataFrame({'x1': X1, 'x2' : X2, 'x5' : X5, 'y': Y})
-	# 		# model = ols("y ~ x1 + x2 + x5", data).fit()
 
-	# 		data = pandas.DataFrame({'x1': X1, 'x2' : X2, 'x3' : X3, 'x4' : X4, 'x5' : X5, 'y': Y})
-	# 		model = ols("y ~ x1 + x2 + x3 + x4 + x5", data).fit()
+	for key in results:
+		result = results[key]
+		print key
+		# print result.rsquared_adj
+		print result.summary()
 
-	# 	else:
-	# 		data = pandas.DataFrame({'x1': X1, 'x2' : X2, 'x3' : X3, 'x4' : X4, 'y': Y})
-	# 		model = ols("y ~ x1 + x2 + x3 + x4", data).fit()
-	# else:
-	# 	data = pandas.DataFrame({'x1': X1, 'x2' : X2, 'y': Y})
-	# 	model = ols("y ~ x1 + x2", data).fit()
 
-	# Print the summary
+
+
+
 
 
 
