@@ -3,8 +3,6 @@ import matplotlib.pyplot as plt
 import pandas
 import statsmodels.api as sm
 import scipy
-import statsmodels.stats.outliers_influence as vif
-import Stepwise_Result
 
 # For 3d plots. This import is necessary to have 3D plotting below
 from mpl_toolkits.mplot3d import Axes3D
@@ -13,6 +11,11 @@ from mpl_toolkits.mplot3d import Axes3D
 from statsmodels.formula.api import ols
 # Analysis of Variance (ANOVA) on linear models
 from statsmodels.stats.anova import anova_lm
+
+from sklearn.linear_model import LogisticRegression
+from sklearn import linear_model
+from sklearn import svm
+from sklearn.model_selection import cross_val_score
 
 airbnb_on = True
 airbnb_review_not_listing = True
@@ -69,6 +72,10 @@ def choose_params_from_int(X, n):
 	for i in param_count_range:
 		if included[i]:
 			new_X.append([x[i+1] for x in X])
+	print "this"
+	print n
+	print X
+	print included
 
 	return create_variables_for_params(new_X), included
 
@@ -152,43 +159,62 @@ for i in range(2016, 2017):
 	Xs = [X1,X2,X3,X4,X5]
 
 	X = sm.add_constant(create_variables_for_params([X1,X2,X3,X4,X5]))
+	print range(2 ** len(Xs))
+	# for l in range(1,2 **len(Xs)):
+	l = 2 **len(Xs) - 1
+	if l > 0:
+		print l
+		final_X, included = choose_params_from_int(X, l)
+		model = sm.OLS(Y,final_X)
+		results = model.fit()
+		print "\n\n\n\n\nmodel for year: " + str(i) + "param inclusion = "
+		print included
+		print results.summary()
 
-	results = []
-	for l in range(1,2 **len(Xs)):
-		X_filtered, included = choose_params_from_int(X, l)
-		model = sm.OLS(Y,X_filtered)
-		result = model.fit()
-		predicted_Y = (result.predict(X_filtered) - Y) ** 2
-		if l == 25:
-			with open('prediction.csv', 'w') as output_file:
-				counter = 0
-				output_file.write("msoacd,prediction\n")
-				for msoa in msoa_order:
-					output_file.write(msoa + ',' + str(predicted_Y[counter]) + '\n')
-					counter += 1
-		# predicted_Y.sort()
-		# plt.plot(predicted_Y)
-		# plt.show()
+		inted_x = []
+		for x in final_X:
+			inted_x.append([int(10000*e) for e in x])
+		inted_y = [int(10000*e) for e in Y]
+		# model1 = LogisticRegression(fit_intercept = False, C = 1e9)
+		# mdl1 = model1.fit(inted_x,inted_y)
 
-		xf = np.column_stack((np.ones(len(X_filtered)), X_filtered))
-		stepwise_result = Stepwise_Result.Stepwise_Result("model for year"+str(i), included, result, result.rsquared_adj, [vif.variance_inflation_factor(xf, k) for k in range(1,len(xf[0]))])
-		results.append(stepwise_result)
+		# print mdl1
+		# print model1.coef_
 
-	for result in results:
-		are_collinear = False
-		for n in result.vif_result:
-			if n > 5.00:
-				are_collinear = True
+		
+		scores = []
+		Cs = [0, .002, .01, .02, .03, .1, .2, .3, .4, .5]
+		for i in range(1,10001,1000):
+			svr_rbf = svm.SVR(kernel='rbf', C=i)
+			svr_rbf.fit(final_X,Y)
+			s = svr_rbf.score(final_X,Y)
+			print s
+			scores.append(s)
 
-		is_good_fit = True if result.adjusted_rs > .9 else False
-
-		if not are_collinear and is_good_fit:
-			pass
-			result.print_object()
+		plt.plot(scores,range(1,10001,1000))
+		plt.show()
 
 
+		# reg = linear_model.Lasso(alpha =.00001)
+		# reg.fit(final_X, Y)
+		# print "sam"
+		# print reg.score(final_X, Y)
+	# if airbnb_on:
+	# 	if airbnb_review_not_listing:
+	# 		# data = pandas.DataFrame({'x1': X1, 'x2' : X2, 'x5' : X5, 'y': Y})
+	# 		# model = ols("y ~ x1 + x2 + x5", data).fit()
 
+	# 		data = pandas.DataFrame({'x1': X1, 'x2' : X2, 'x3' : X3, 'x4' : X4, 'x5' : X5, 'y': Y})
+	# 		model = ols("y ~ x1 + x2 + x3 + x4 + x5", data).fit()
 
+	# 	else:
+	# 		data = pandas.DataFrame({'x1': X1, 'x2' : X2, 'x3' : X3, 'x4' : X4, 'y': Y})
+	# 		model = ols("y ~ x1 + x2 + x3 + x4", data).fit()
+	# else:
+	# 	data = pandas.DataFrame({'x1': X1, 'x2' : X2, 'y': Y})
+	# 	model = ols("y ~ x1 + x2", data).fit()
+
+	# Print the summary
 
 
 
